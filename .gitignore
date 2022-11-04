@@ -1,0 +1,10 @@
+target/
+test-reports/
+
+.bloop/
+.bsp/
+.metals/
+metals.sbt
+
+.idea
+.vscode
