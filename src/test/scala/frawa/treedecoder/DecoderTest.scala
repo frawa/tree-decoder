@@ -7,6 +7,7 @@ class DecoderTest extends FunSuite {
   import TestTree.*
 
   case class Toto() {}
+  case class Titi() {}
 
   test("not found") {
     val root    = Node("root")
@@ -20,6 +21,20 @@ class DecoderTest extends FunSuite {
     val decoder = child("toto", success(Toto()))
     val toto    = decoder.decode(root)
     assertEquals(toto, Right(Toto()))
+  }
+
+  test("map") {
+    val root    = Node("root", Seq(Leaf("toto")))
+    val decoder = map(child("toto", success(Toto()))) { toto => Titi() }
+    val titi    = decoder.decode(root)
+    assertEquals(titi, Right(Titi()))
+  }
+
+  test("seq") {
+    val root    = Node("root", Seq(Leaf("toto"), Leaf("titi"), Leaf("toto")))
+    val decoder = seq(child("toto", success(Toto())))
+    val titi    = decoder.decode(root)
+    assertEquals(titi, Right(Seq(Toto(), Toto())))
   }
 
 }
