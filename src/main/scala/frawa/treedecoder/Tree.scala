@@ -1,17 +1,15 @@
 package frawa.treedecoder
 
-trait TreeData[Tree, D]:
-  extension (node: Tree) def data(): D
+trait Tree[Node, Data]:
+  extension (node: Node) def data(): Data
+  extension (parent: Node) def children(): Seq[Node]
 
-trait TreeFinder[Tree]:
-  extension (parent: Tree) def children(): Seq[Tree]
-
-extension [Tree](parent: Tree)
-  def findChild[D](data: D)(using TreeFinder[Tree])(using TreeData[Tree, D]): Option[Tree] =
+extension [Node, Data](parent: Node)
+  def findChild(data: Data)(using Tree[Node, Data]): Option[Node] =
     TreeFinder.findChild(parent, data)
 
 object TreeFinder:
-  def findChild[Tree, D](node: Tree, data: D)(using TreeFinder[Tree])(using TreeData[Tree, D]): Option[Tree] =
+  def findChild[Node, Data](node: Node, data: Data)(using Tree[Node, Data]): Option[Node] =
     node
       .children()
       .filter(_.data() == data)
