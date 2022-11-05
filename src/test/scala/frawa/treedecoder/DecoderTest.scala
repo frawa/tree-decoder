@@ -23,6 +23,13 @@ class DecoderTest extends FunSuite {
     assertEquals(toto, Right(Toto()))
   }
 
+  test("data") {
+    val root    = Node("root", Seq(Leaf("toto")))
+    val decoder = child("toto", data)
+    val value   = decoder.decode(root)
+    assertEquals(value, Right("toto"))
+  }
+
   test("map") {
     val root    = Node("root", Seq(Leaf("toto")))
     val decoder = map(child("toto", success(Toto()))) { toto => Titi() }
@@ -30,11 +37,18 @@ class DecoderTest extends FunSuite {
     assertEquals(titi, Right(Titi()))
   }
 
+  // test("flatMap") {
+  //   val root    = Node("root", Seq(Leaf("toto"), Leaf("titi")))
+  //   val decoder = andThen(child("toto", success(Toto())), data())
+  //   val titi    = decoder.decode(root)
+  //   assertEquals(titi, Right(Toto()))
+  // }
+
   test("seq") {
     val root    = Node("root", Seq(Leaf("toto"), Leaf("titi"), Leaf("toto")))
     val decoder = seq(child("toto", success(Toto())))
     val titi    = decoder.decode(root)
-    assertEquals(titi, Right(Seq(Toto(), Toto())))
+    assertEquals(titi, Right(Seq(Toto())))
   }
 
 }
