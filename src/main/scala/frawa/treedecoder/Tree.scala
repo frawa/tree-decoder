@@ -12,8 +12,8 @@ object TreeFinder:
   opaque type At[Node] = Seq[At.Item[Node]]
 
   extension [Node](at: At[Node])
-    def valid: Boolean          = at.nonEmpty
-    def withoutParent: At[Node] = at.headOption.map(head => At.node(head.node)).getOrElse(Seq())
+    def valid: Boolean                              = at.nonEmpty
+    def withoutParent: At[Node]                     = at.headOption.map(At.one(_)).getOrElse(Seq())
     def withSameParentAs(other: At[Node]): At[Node] = at ++ other.drop(1)
     def map[T](f: Node => T): Seq[T]                = at.map(_.node).map(f)
     def mapNode[T](f: Node => T): Option[T]         = at.headOption.map(_.node).map(f)
@@ -21,8 +21,9 @@ object TreeFinder:
   object At:
     case class Item[Node](node: Node, nextSibling: Option[Item[Node]])
 
-    def node[Node](node: Node): At[Node]                       = Seq(Item(node, None))
-    def push[Node](n: Item[Node], parents: At[Node]): At[Node] = n +: parents
+    def node[Node](node: Node): At[Node]                          = Seq(Item(node, None))
+    def push[Node](item: Item[Node], parents: At[Node]): At[Node] = item +: parents
+    def one[Node](item: Item[Node]): At[Node]                     = Seq(item)
     def siblings[Node](children: Seq[Node]): Seq[Item[Node]] =
       def children1 = children.map(Some(_))
       def siblings1 =
@@ -45,7 +46,7 @@ object TreeFinder:
             .map(n => At.push(n, at))
             .orElse {
               children
-                .map(ch => find(At.node(ch.node), data))
+                .map(ch => find(At.one(ch), data))
                 .filterNot(_.isEmpty)
                 .headOption
                 .map(_ ++ at)

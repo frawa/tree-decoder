@@ -3,19 +3,21 @@ package frawa.treedecoder
 trait Decoder[Node, Data, T]:
   import Decoder.E
   import Decoder.Decoded
+  import TreeFinder.At
 
   def decode(node: Node)(using Tree[Node, Data]): Either[E, T] =
-    decode_(Seq(node)).map(_.value)
+    decode_(At.node(node)).map(_.value)
 
   def map[S](f: T => S)(using Tree[Node, Data])                          = Decoder.map(this)(f)
   def flatMap[S](f: T => Decoder[Node, Data, S])(using Tree[Node, Data]) = Decoder.flatMap(this)(f)
 
-  protected def decode_(at: Seq[Node])(using Tree[Node, Data]): Either[E, Decoded[Node, T]]
+  protected def decode_(at: At[Node])(using Tree[Node, Data]): Either[E, Decoded[Node, T]]
 
 object Decoder:
+  import TreeFinder.At
   type E = String
 
-  case class Decoded[Node, T](value: T, at: Seq[Node]) {
+  case class Decoded[Node, T](value: T, at: At[Node]) {
     def map[S](f: T => S): Decoded[Node, S]     = this.copy(value = f(value))
     def flatMap[S](f: T => S): Decoded[Node, S] = this.copy(value = f(value))
   }
@@ -30,13 +32,12 @@ object Decoder:
       Tree[Node, Data]
   ): Decoder[Node, Data, T] =
     FunDecoder(at =>
-      // TODO replace Seq by NonEmptySeq?
       val found = TreeFinder.find(at, data)
-      if found.nonEmpty then
+      if found.valid then
         decoder
-          .decode_(Seq(found.head))
+          .decode_(found.withoutParent)
           .map { d =>
-            Decoded(d.value, d.at ++ found.drop(1))
+            Decoded(d.value, d.at.withSameParentAs(found))
           }
       else Left(s"node '${data}' not found under '${at.map(_.data).reverse.mkString(".")}'")
     )
@@ -61,27 +62,30 @@ object Decoder:
   ): Decoder[Node, Data, Seq[T]] =
     FunDecoder { at =>
       val start = decoder.decode_(at)
-      Right(
-        Iterator
-          .iterate(start)(d =>
-            d.flatMap(d =>
-              val next = TreeFinder.nextAfter(d.at)
-              decoder.decode_(next)
-            )
+      val decoded = Iterator
+        .iterate(start)(d =>
+          d.flatMap(d =>
+            val next = TreeFinder.nextAfter(d.at)
+            decoder.decode_(next)
           )
-          .takeWhile(_.isRight)
-          .flatMap(_.toOption)
-          .foldLeft(Decoded(Seq[T](), at))((acc, d) => d.copy(value = acc.value :+ d.value))
-      )
+        )
+        .takeWhile(_.isRight)
+        .flatMap(_.toOption)
+        .foldLeft(Decoded(Seq[T](), at))((acc, d) => d.copy(value = acc.value :+ d.value))
+      Right(decoded)
     }
 
-  private class FunDecoder[Node, Data, T](fun: Seq[Node] => Either[E, Decoded[Node, T]])
+  private class FunDecoder[Node, Data, T](fun: At[Node] => Either[E, Decoded[Node, T]])
       extends Decoder[Node, Data, T]:
-    def decode_(at: Seq[Node])(using Tree[Node, Data]): Either[String, Decoded[Node, T]] =
+    def decode_(at: At[Node])(using Tree[Node, Data]): Either[String, Decoded[Node, T]] =
       fun(at)
 
   private class DataDecoder[Node, Data] extends Decoder[Node, Data, Data]:
-    def decode_(at: Seq[Node])(using Tree[Node, Data]): Either[String, Decoded[Node, Data]] =
-      Right(Decoded(at.head.data, at))
+    def decode_(at: At[Node])(using Tree[Node, Data]): Either[String, Decoded[Node, Data]] =
+      at
+        .mapNode(_.data)
+        .map(Decoded(_, at))
+        .map(Right(_))
+        .getOrElse(Left("no data"))
 
 end Decoder
