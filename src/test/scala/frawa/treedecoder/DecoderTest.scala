@@ -61,4 +61,58 @@ class DecoderTest extends FunSuite {
     assertEquals(titi, Right(Seq(Toto(), Toto())))
   }
 
+  test("more realistic use case") {
+    enum Ast:
+      case FunCall(name: String, arguments: Seq[String])
+
+    val parsedTree = Node(
+      "parsed",
+      Seq(
+        Node(
+          "chunk",
+          Seq(
+            Node(
+              "FunCall",
+              Seq(
+                Leaf("chunk"),
+                Node(
+                  "Name",
+                  Seq(
+                    Leaf("myFun")
+                  )
+                ),
+                Node(
+                  "chunk",
+                  Seq(
+                    Leaf("junk"),
+                    Node(
+                      "arguments",
+                      Seq(
+                        Node("Argument", Seq(Leaf("myOne"))),
+                        Node("Argument", Seq(Leaf("myTwo")))
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+    val decoder =
+      node(
+        "FunCall",
+        map2(
+          node("Name", firstChild(data)),
+          seq(node("Argument", firstChild(data)))
+        ) { case (name, arguments) =>
+          Ast.FunCall(name, arguments)
+        }
+      )
+
+    val ast = decoder.decode(parsedTree)
+    assertEquals(ast, Right(Ast.FunCall("myFun", Seq("myOne", "myTwo"))))
+  }
+
 }

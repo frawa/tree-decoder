@@ -28,6 +28,25 @@ object Decoder:
   def data[Node, Data]: Decoder[Node, Data, Data] =
     DataDecoder()
 
+  // def next[Node, Data, T](decoder: Decoder[Node, Data, T])(using
+  //     Tree[Node, Data]
+  // ): Decoder[Node, Data, T] =
+  //   FunDecoder(at =>
+  //     val next = TreeFinder.nextAfter(at)
+  //     decoder.decode_(next)
+  //   )
+
+  def firstChild[Node, Data, T](decoder: Decoder[Node, Data, T])(using
+      Tree[Node, Data]
+  ): Decoder[Node, Data, T] =
+    FunDecoder(at =>
+      at.mapNode(_.children)
+        .map(children => At.siblings(children))
+        .flatMap(_.headOption)
+        .map(first => decoder.decode_(At.push(first, at)))
+        .getOrElse(Left("no children"))
+    )
+
   def node[Node, Data, T](data: Data, decoder: Decoder[Node, Data, T])(using
       Tree[Node, Data]
   ): Decoder[Node, Data, T] =
@@ -46,6 +65,17 @@ object Decoder:
       Tree[Node, Data]
   ): Decoder[Node, Data, S] =
     FunDecoder(at => decoder.decode_(at).map(_.map(f)))
+
+  def map2[Node, Data, T1, T2, S](
+      decoder1: Decoder[Node, Data, T1],
+      decoder2: Decoder[Node, Data, T2]
+  )(f: (T1, T2) => S)(using
+      Tree[Node, Data]
+  ): Decoder[Node, Data, S] = flatMap(decoder1) { v1 =>
+    map(decoder2) { v2 =>
+      f(v1, v2)
+    }
+  }
 
   def flatMap[Node, Data, T, S](decoder: Decoder[Node, Data, T])(f: T => Decoder[Node, Data, S])(
       using Tree[Node, Data]
