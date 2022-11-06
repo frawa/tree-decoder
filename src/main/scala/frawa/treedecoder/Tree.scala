@@ -5,23 +5,47 @@ trait Tree[Node, Data]:
   extension (parent: Node) def children: Seq[Node]
 
 extension [Node, Data](node: Node)
-  def find(data: Data)(using Tree[Node, Data]): Seq[Node] =
-    TreeFinder.find(Seq(node), data)
+  def find(data: Data)(using Tree[Node, Data]): TreeFinder.At[Node] =
+    TreeFinder.find(TreeFinder.At.node(node), data)
 
 object TreeFinder:
-  def find[Node, Data](at: Seq[Node], data: Data)(using Tree[Node, Data]): Seq[Node] =
+  opaque type At[Node] = Seq[At.Item[Node]]
+
+  extension [Node](at: At[Node])
+    def valid: Boolean          = at.nonEmpty
+    def withoutParent: At[Node] = at.headOption.map(head => At.node(head.node)).getOrElse(Seq())
+    def withSameParentAs(other: At[Node]): At[Node] = at ++ other.drop(1)
+    def map[T](f: Node => T): Seq[T]                = at.map(_.node).map(f)
+    def mapNode[T](f: Node => T): Option[T]         = at.headOption.map(_.node).map(f)
+
+  object At:
+    case class Item[Node](node: Node, nextSibling: Option[Item[Node]])
+
+    def node[Node](node: Node): At[Node]                       = Seq(Item(node, None))
+    def push[Node](n: Item[Node], parents: At[Node]): At[Node] = n +: parents
+    def siblings[Node](children: Seq[Node]): Seq[Item[Node]] =
+      def children1 = children.map(Some(_))
+      def siblings1 =
+        if children.size > 1 then At.siblings(children.drop(1)).map(Some(_))
+        else Seq()
+      children1.zipAll(siblings1, None, None).map { case (child, sibling) =>
+        Item(child.get, sibling)
+      }
+
+  def find[Node, Data](at: At[Node], data: Data)(using Tree[Node, Data]): At[Node] =
     at.headOption
-      .map { node =>
-        if node.data == data
-        then node +: at.drop(1)
+      .map { n =>
+        if n.node.data == data
+        then at
         else
-          node.children
-            .filter(_.data == data)
+          val children = At.siblings(n.node.children)
+          children
+            .filter(_.node.data == data)
             .headOption
-            .map(_ +: at)
+            .map(n => At.push(n, at))
             .orElse {
-              node.children
-                .map(ch => find(Seq(ch), data))
+              children
+                .map(ch => find(At.node(ch.node), data))
                 .filterNot(_.isEmpty)
                 .headOption
                 .map(_ ++ at)
@@ -30,19 +54,13 @@ object TreeFinder:
       }
       .getOrElse(Seq())
 
-  def nextAfter[Node, Data](at: Seq[Node])(using
+  def nextAfter[Node, Data](at: At[Node])(using
       Tree[Node, Data]
-  ): Seq[Node] =
+  ): At[Node] =
     val parents = at.drop(1)
-    val parent  = parents.headOption
-    val node    = at.headOption
-    node
-      .zip(parent)
-      .flatMap { (node, parent) =>
-        parent.children
-          .dropWhile(!_.asInstanceOf[AnyRef].equals(node.asInstanceOf[AnyRef]))
-          .drop(1)
-          .headOption
-          .map(_ +: parents)
-      }
+    at.headOption
+      .flatMap(_.nextSibling)
+      .map(n => At.push(n, parents))
       .getOrElse(if parents.nonEmpty then nextAfter(parents) else Seq())
+
+end TreeFinder

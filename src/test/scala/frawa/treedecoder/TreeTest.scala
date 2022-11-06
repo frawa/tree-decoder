@@ -2,13 +2,15 @@ package frawa.treedecoder
 
 import munit.*
 
+import TreeFinder.*
+
 class TreeTest extends FunSuite {
   import TestTree.*
 
   test("empty") {
     val emptyRoot = Node("root")
     assertEquals(emptyRoot.data, "root");
-    assertEquals(emptyRoot.find("root"), Seq(emptyRoot));
+    assertEquals(emptyRoot.find("root"), At.node(emptyRoot));
   }
 
   test("find child") {
@@ -28,51 +30,51 @@ class TreeTest extends FunSuite {
     val root = Node("root", Seq(Node("nested", Seq(Leaf("foo"))), Node("nested", Seq(Leaf("bar")))))
     val nested1 = root.find("nested")
     assertEquals(nested1.map(_.data), Seq("nested", "root"))
-    assertEquals(nested1.head, Node("nested", Seq(Leaf("foo"))))
-    val nested2 = TreeFinder.nextAfter(nested1)
+    assertEquals(nested1.mapNode(identity).get, Node("nested", Seq(Leaf("foo"))))
+    val nested2 = nextAfter(nested1)
     assertEquals(nested2.map(_.data), Seq("nested", "root"))
-    assertEquals(nested2.head, Node("nested", Seq(Leaf("bar"))))
+    assertEquals(nested2.mapNode(identity).get, Node("nested", Seq(Leaf("bar"))))
   }
 
   test("find within scope") {
     val root   = Node("root", Seq(Node("nested", Seq(Leaf("foo"))), Leaf("bar")))
     val nested = root.find("nested")
     assertEquals(nested.map(_.data), Seq("nested", "root"))
-    assertEquals(nested.head, Node("nested", Seq(Leaf("foo"))))
-    val foo = nested.head.find("foo")
+    assertEquals(nested.mapNode(identity).get, Node("nested", Seq(Leaf("foo"))))
+    val foo = nested.mapNode(identity).get.find("foo")
     assertEquals(foo.map(_.data), Seq("foo", "nested"))
-    assertEquals(foo.head, Leaf("foo"))
-    val noBar = nested.head.find("bar")
-    assertEquals(noBar, Seq())
-    val bar = TreeFinder.find(nested, "bar")
+    assertEquals(foo.mapNode(identity).get, Leaf("foo"))
+    val noBar = nested.mapNode(identity).get.find("bar")
+    assertEquals(noBar.valid, false)
+    val bar = find(nested, "bar")
     assertEquals(bar.map(_.data), Seq("bar", "root"))
-    assertEquals(bar.head, Leaf("bar"))
+    assertEquals(bar.mapNode(identity).get, Leaf("bar"))
   }
 
   test("next after sibling") {
     val root  = Node("root", Seq(Leaf("toto"), Leaf("titi"), Node("toto", Seq())))
     val toto1 = root.find("toto")
     assertEquals(toto1.map(_.data), Seq("toto", "root"))
-    assertEquals(toto1.head, Leaf("toto"))
-    val next = TreeFinder.nextAfter(toto1)
+    assertEquals(toto1.mapNode(identity).get, Leaf("toto"))
+    val next = nextAfter(toto1)
     assertEquals(next.map(_.data), Seq("titi", "root"))
-    val toto2 = TreeFinder.find(next, "toto")
+    val toto2 = find(next, "toto")
     assertEquals(toto2.map(_.data), Seq("toto", "root"))
-    assertEquals(toto2.head, Node("toto", Seq()))
-    val next2 = TreeFinder.nextAfter(next)
+    assertEquals(toto2.mapNode(identity).get, Node("toto", Seq()))
+    val next2 = nextAfter(next)
     assertEquals(next2.map(_.data), Seq("toto", "root"))
-    assertEquals(next2.head, Node("toto", Seq()))
+    assertEquals(next2.mapNode(identity).get, Node("toto", Seq()))
   }
 
   test("find equal children") {
     val root  = Node("root", Seq(Leaf("toto"), Leaf("toto")))
     val toto1 = root.find("toto")
     assertEquals(toto1.map(_.data), Seq("toto", "root"))
-    assertEquals(toto1.head, Leaf("toto"))
-    val toto2 = TreeFinder.find(toto1, "toto")
+    assertEquals(toto1.mapNode(identity).get, Leaf("toto"))
+    val toto2 = find(nextAfter(toto1), "toto")
     assertEquals(toto2.map(_.data), Seq("toto", "root"))
-    assertEquals(toto2.head, Leaf("toto"))
-    val toto3 = TreeFinder.find(toto2, "toto")
-    assertEquals(toto3, Seq())
+    assertEquals(toto2.mapNode(identity).get, Leaf("toto"))
+    val toto3 = find(nextAfter(toto2), "toto")
+    assertEquals(toto3.valid, false)
   }
 }
