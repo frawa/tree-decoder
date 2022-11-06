@@ -6,11 +6,11 @@ enum TestTree:
 
 given Tree[TestTree, String] with
   extension (node: TestTree)
-    def data(): String = node match {
+    def data: String = node match {
       case TestTree.Leaf(text)            => text
       case TestTree.Node(title, children) => title
     }
-    def children(): Seq[TestTree] =
+    def children: Seq[TestTree] =
       node match {
         case _: TestTree.Leaf           => Seq()
         case TestTree.Node(_, children) => children
