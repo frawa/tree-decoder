@@ -6,7 +6,7 @@ trait Decoder[Node, Data, T]:
   import TreeFinder.At
 
   def decode(node: Node)(using Tree[Node, Data]): Either[E, T] =
-    decode_(At.node(node)).map(_.value)
+    decode_(At.root(node)).map(_.value)
 
   def map[S](f: T => S)(using Tree[Node, Data])                          = Decoder.map(this)(f)
   def flatMap[S](f: T => Decoder[Node, Data, S])(using Tree[Node, Data]) = Decoder.flatMap(this)(f)
@@ -43,7 +43,7 @@ object Decoder:
       at.mapNode(_.children)
         .map(children => At.siblings(children))
         .flatMap(_.headOption)
-        .map(first => decoder.decode_(At.push(first, at)))
+        .map(first => decoder.decode_(At.withParent(first, at)))
         .getOrElse(Left("no children"))
     )
 

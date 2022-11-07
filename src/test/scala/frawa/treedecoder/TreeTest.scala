@@ -10,7 +10,7 @@ class TreeTest extends FunSuite {
   test("empty") {
     val emptyRoot = Node("root")
     assertEquals(emptyRoot.data, "root");
-    assertEquals(emptyRoot.find("root"), At.node(emptyRoot));
+    assertEquals(emptyRoot.find("root"), At.root(emptyRoot));
   }
 
   test("find child") {
