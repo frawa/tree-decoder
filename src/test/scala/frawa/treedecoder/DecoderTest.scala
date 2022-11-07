@@ -83,6 +83,14 @@ class DecoderTest extends FunSuite {
     assertEquals(titi, Right(Seq(Toto(), Toto())))
   }
 
+  test("seq all children") {
+    val root =
+      Node("root", Seq(Node("foo", Seq(Leaf("toto"), Leaf("titi"), Leaf("toto"))), Leaf("boom")))
+    val decoder = node("foo", firstChild(seq(data)))
+    val value   = decoder.decode(root)
+    assertEquals(value, Right(Seq("toto", "titi", "toto")))
+  }
+
   test("more realistic use case") {
     enum Ast:
       case FunCall(name: String, arguments: Seq[String])

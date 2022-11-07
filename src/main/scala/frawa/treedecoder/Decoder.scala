@@ -54,10 +54,8 @@ object Decoder:
       val found = TreeFinder.find(at, data)
       if found.valid then
         decoder
-          .decode_(found.withoutParent)
-          .map { d =>
-            Decoded(d.value, d.at.withSameParentAs(found))
-          }
+          .decode_(found.asRoot)
+          .map(d => Decoded(d.value, found))
       else Left(s"node '${data}' not found under '${at.map(_.data).reverse.mkString(".")}'")
     )
 

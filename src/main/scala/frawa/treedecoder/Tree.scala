@@ -15,8 +15,11 @@ object TreeFinder:
     def valid: Boolean                              = at.nonEmpty
     def withoutParent: At[Node]                     = at.headOption.map(At.one(_)).getOrElse(Seq())
     def withSameParentAs(other: At[Node]): At[Node] = at ++ other.drop(1)
-    def map[T](f: Node => T): Seq[T]                = at.map(_.node).map(f)
-    def mapNode[T](f: Node => T): Option[T]         = at.headOption.map(_.node).map(f)
+    def asRoot: At[Node] = at.headOption
+      .map(head => At.one(head.copy(nextSibling = None)))
+      .getOrElse(Seq())
+    def map[T](f: Node => T): Seq[T]        = at.map(_.node).map(f)
+    def mapNode[T](f: Node => T): Option[T] = at.headOption.map(_.node).map(f)
 
   object At:
     case class Item[Node](node: Node, nextSibling: Option[Item[Node]])
