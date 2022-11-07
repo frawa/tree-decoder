@@ -75,6 +75,18 @@ object Decoder:
     }
   }
 
+  def map3[Node, Data, T1, T2, T3, S](
+      decoder1: Decoder[Node, Data, T1],
+      decoder2: Decoder[Node, Data, T2],
+      decoder3: Decoder[Node, Data, T3]
+  )(f: (T1, T2, T3) => S)(using
+      Tree[Node, Data]
+  ): Decoder[Node, Data, S] = flatMap(decoder1) { v1 =>
+    map2(decoder2, decoder3) { (v2, v3) =>
+      f(v1, v2, v3)
+    }
+  }
+
   def flatMap[Node, Data, T, S](decoder: Decoder[Node, Data, T])(f: T => Decoder[Node, Data, S])(
       using Tree[Node, Data]
   ): Decoder[Node, Data, S] =
