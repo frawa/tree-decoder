@@ -28,13 +28,13 @@ object Decoder:
   def data[Node, Data]: Decoder[Node, Data, Data] =
     DataDecoder()
 
-  // def next[Node, Data, T](decoder: Decoder[Node, Data, T])(using
-  //     Tree[Node, Data]
-  // ): Decoder[Node, Data, T] =
-  //   FunDecoder(at =>
-  //     val next = TreeFinder.nextAfter(at)
-  //     decoder.decode_(next)
-  //   )
+  def next[Node, Data, T](decoder: Decoder[Node, Data, T])(using
+      Tree[Node, Data]
+  ): Decoder[Node, Data, T] =
+    FunDecoder(at =>
+      val next = TreeFinder.nextAfter(at)
+      decoder.decode_(next)
+    )
 
   def firstChild[Node, Data, T](decoder: Decoder[Node, Data, T])(using
       Tree[Node, Data]
