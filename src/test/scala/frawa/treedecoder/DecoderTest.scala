@@ -6,9 +6,10 @@ class DecoderTest extends FunSuite {
   import Decoder.*
   import TestTree.*
 
-  case class Toto()          {}
-  case class Titi()          {}
-  case class Foo(toto: Toto) {}
+  case class Toto()                  {}
+  case class Titi()                  {}
+  case class Gnu(i: Int, toto: Toto) {}
+  case class Foo(toto: Toto)         {}
 
   test("not found") {
     val root    = Node("root")
@@ -38,11 +39,25 @@ class DecoderTest extends FunSuite {
     assertEquals(value, Right("toto"))
   }
 
+  test("firstChild") {
+    val root    = Node("root", Seq(Leaf("toto")))
+    val decoder = node("root", firstChild(data))
+    val value   = decoder.decode(root)
+    assertEquals(value, Right("toto"))
+  }
+
   test("map") {
     val root    = Node("root", Seq(Leaf("toto")))
     val decoder = node("toto", success(Toto())).map { toto => Titi() }
     val titi    = decoder.decode(root)
     assertEquals(titi, Right(Titi()))
+  }
+
+  test("map2") {
+    val root    = Node("root", Seq(Leaf("toto")))
+    val decoder = map2(node("toto", success(Toto())), success(13)) { (toto, i) => Gnu(i, toto) }
+    val gnu     = decoder.decode(root)
+    assertEquals(gnu, Right(Gnu(13, Toto())))
   }
 
   test("flatMap") {
