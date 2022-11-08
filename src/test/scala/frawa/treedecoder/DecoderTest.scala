@@ -96,12 +96,29 @@ class DecoderTest extends FunSuite {
     assertEquals(value, Left("boom"))
   }
 
-  test("walk depth first".ignore) {
+  test("orElse") {
+    val value = failure("boom").orElse(success(13)).decode(Leaf("root"))
+    assertEquals(value, Right(13))
+  }
+
+  test("walk depth first") {
     val root =
-      Node("root", Seq(Node("foo", Seq(Leaf("toto"), Leaf("titi"), Leaf("toto"))), Leaf("boom")))
-    val decoder = success[TestTree, String, Seq[String]](Seq[String](""))
-    val value   = decoder.decode(root)
-    assertEquals(value, Right(Seq("root", "foo", "toto", "titi", "toto", "boom")))
+      Node(
+        "root",
+        Seq(
+          Node("foo", Seq(Leaf("toto"), Node("titi", Seq(Node("bar", Seq()))), Leaf("toto2"))),
+          Leaf("boom")
+        )
+      )
+    def decoder: Decoder[TestTree, String, Seq[String]] =
+      data.flatMap(d =>
+        firstChild(seq(lazily(() => decoder)).map(_.flatten))
+          .orElse(success(Seq()))
+          .map(dd => d +: dd)
+      )
+
+    val value = decoder.decode(root)
+    assertEquals(value, Right(Seq("root", "foo", "toto", "titi", "bar", "toto2", "boom")))
   }
 
   test("more realistic use case") {

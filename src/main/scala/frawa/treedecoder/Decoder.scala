@@ -10,6 +10,8 @@ trait Decoder[Node, Data, T]:
 
   def map[S](f: T => S)(using Tree[Node, Data])                          = Decoder.map(this)(f)
   def flatMap[S](f: T => Decoder[Node, Data, S])(using Tree[Node, Data]) = Decoder.flatMap(this)(f)
+  def orElse(fallback: => Decoder[Node, Data, T])(using Tree[Node, Data]) =
+    Decoder.orElse(this, fallback)
 
   protected def decode_(at: At[Node])(using Tree[Node, Data]): Either[E, Decoded[Node, T]]
 
@@ -27,6 +29,11 @@ object Decoder:
 
   def failure[Node, Data, T](message: String)(using Tree[Node, Data]): Decoder[Node, Data, T] =
     FunDecoder(at => Left(message))
+
+  def orElse[Node, Data, T](decoder: Decoder[Node, Data, T], fallback: Decoder[Node, Data, T])(using
+      Tree[Node, Data]
+  ): Decoder[Node, Data, T] =
+    FunDecoder(at => decoder.decode_(at).orElse(fallback.decode_(at)))
 
   def data[Node, Data]: Decoder[Node, Data, Data] =
     DataDecoder()
@@ -116,6 +123,13 @@ object Decoder:
         .flatMap(_.toOption)
         .foldLeft(Decoded(Seq[T](), at))((acc, d) => d.copy(value = acc.value :+ d.value))
       Right(decoded)
+    }
+
+  def lazily[Node, Data, T](f: () => Decoder[Node, Data, T])(using
+      Tree[Node, Data]
+  ): Decoder[Node, Data, T] =
+    FunDecoder { at =>
+      f().decode_(at)
     }
 
   private class FunDecoder[Node, Data, T](fun: At[Node] => Either[E, Decoded[Node, T]])
