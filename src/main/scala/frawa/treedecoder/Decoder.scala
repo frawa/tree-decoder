@@ -13,13 +13,15 @@ trait Decoder[Node, Data, T]:
   def orElse(fallback: => Decoder[Node, Data, T])(using Tree[Node, Data]) =
     Decoder.orElse(this, fallback)
 
-  protected def decode_(at: At[Node])(using Tree[Node, Data]): Either[E, Decoded[Node, T]]
+  protected[treedecoder] def decode_(at: At[Node])(using
+      Tree[Node, Data]
+  ): Either[E, Decoded[Node, T]]
 
 object Decoder:
   import TreeFinder.At
   type E = String
 
-  case class Decoded[Node, T](value: T, at: At[Node]) {
+  private[treedecoder] case class Decoded[Node, T](value: T, at: At[Node]) {
     def map[S](f: T => S): Decoded[Node, S]     = this.copy(value = f(value))
     def flatMap[S](f: T => S): Decoded[Node, S] = this.copy(value = f(value))
   }
@@ -54,7 +56,7 @@ object Decoder:
         .map(children => At.siblings(children))
         .flatMap(_.headOption)
         .map(first => decoder.decode_(At.withParent(first, at)))
-        .getOrElse(Left("no children"))
+        .getOrElse(Left("no children for '${at.dataPath}'"))
     )
 
   def node[Node, Data, T](data: Data, decoder: Decoder[Node, Data, T])(using
@@ -66,7 +68,7 @@ object Decoder:
         decoder
           .decode_(found.asRoot)
           .map(d => Decoded(d.value, found))
-      else Left(s"node '${data}' not found under '${at.map(_.data).reverse.mkString(".")}'")
+      else Left(s"node '${data}' not found under '${at.dataPath}'")
     )
 
   def map[Node, Data, T, S](decoder: Decoder[Node, Data, T])(f: T => S)(using
@@ -143,6 +145,6 @@ object Decoder:
         .mapNode(_.data)
         .map(Decoded(_, at))
         .map(Right(_))
-        .getOrElse(Left("no data"))
+        .getOrElse(Left(s"no data at '${at.dataPath}'"))
 
 end Decoder
