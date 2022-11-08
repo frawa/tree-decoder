@@ -91,6 +91,19 @@ class DecoderTest extends FunSuite {
     assertEquals(value, Right(Seq("toto", "titi", "toto")))
   }
 
+  test("failure") {
+    val value = failure("boom").decode(Leaf("root"))
+    assertEquals(value, Left("boom"))
+  }
+
+  test("walk depth first".ignore) {
+    val root =
+      Node("root", Seq(Node("foo", Seq(Leaf("toto"), Leaf("titi"), Leaf("toto"))), Leaf("boom")))
+    val decoder = success[TestTree, String, Seq[String]](Seq[String](""))
+    val value   = decoder.decode(root)
+    assertEquals(value, Right(Seq("root", "foo", "toto", "titi", "toto", "boom")))
+  }
+
   test("more realistic use case") {
     enum Ast:
       case FunCall(name: String, arguments: Seq[String])

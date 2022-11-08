@@ -25,6 +25,9 @@ object Decoder:
   def success[Node, Data, T](value: => T)(using Tree[Node, Data]): Decoder[Node, Data, T] =
     FunDecoder(at => Right(Decoded(value, at)))
 
+  def failure[Node, Data, T](message: String)(using Tree[Node, Data]): Decoder[Node, Data, T] =
+    FunDecoder(at => Left(message))
+
   def data[Node, Data]: Decoder[Node, Data, Data] =
     DataDecoder()
 
