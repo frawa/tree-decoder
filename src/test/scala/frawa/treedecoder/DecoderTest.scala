@@ -121,6 +121,24 @@ class DecoderTest extends FunSuite {
     assertEquals(value, Right(Seq("root", "foo", "toto", "titi", "bar", "toto2", "boom")))
   }
 
+  test("walk breadth first".ignore) {
+    val root =
+      Node(
+        "root",
+        Seq(
+          Node("foo", Seq(Leaf("toto"), Node("titi", Seq(Node("bar", Seq()))), Leaf("toto2"))),
+          Leaf("boom")
+        )
+      )
+    def decoder: Decoder[TestTree, String, Seq[String]] =
+      seq(data)
+      // flatMap(dd =>
+      //   firstChild(lazily(() => decoder).map(dd2 => dd ++ dd2)).orElse(success(Seq()))
+      // )
+    val value = decoder.decode(root)
+    assertEquals(value, Right(Seq("root", "foo", "boom", "toto", "titi", "toto2", "bar")))
+  }
+
   test("more realistic use case") {
     enum Ast:
       case FunCall(name: String, arguments: Seq[String])
